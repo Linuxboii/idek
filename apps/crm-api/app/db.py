@@ -380,7 +380,7 @@ async def list_conversations(
         ORDER BY COALESCE(m.created_at, l.created_at) DESC
         LIMIT $2 OFFSET $3;
         """
-        args = (phone, limit, offset)
+        args = (_normalize_phone(phone), limit, offset)
     else:
         q = """
         SELECT

@@ -1,11 +1,12 @@
 import asyncio
 import logging
 import os
+import re
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, HTTPException, Query, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse, FileResponse
+from fastapi.responses import PlainTextResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import settings
@@ -28,29 +29,55 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+CORS_ORIGIN_RE = re.compile(
+    r"https://([a-z0-9-]+\.)*avlokai\.com"
+    r"|https://.*\.devtunnels\.ms"
+    r"|https://.*\.github\.io"
+    r"|https://.*\.vercel\.app"
+    r"|https://.*\.pages\.dev"
+    r"|https://.*\.ngrok-free\.app"
+    r"|https://.*\.ngrok\.io"
+    r"|http://localhost:\d+"
+    r"|http://127\.0\.0\.1:\d+"
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:8000",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:8000",
-        "https://wa-slilg.avlokai.com",
-        "http://wa-slilg.avlokai.com",
-    ],
-    allow_origin_regex=(
-        r"https://.*\.devtunnels\.ms"
-        r"|https://.*\.github\.io"
-        r"|https://.*\.vercel\.app"
-        r"|https://.*\.ngrok-free\.app"
-        r"|https://.*\.ngrok\.io"
-    ),
+    allow_origin_regex=CORS_ORIGIN_RE.pattern,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Internal-Token", "X-Requested-With"],
 )
+
+
+def _cors_headers(request: Request) -> dict:
+    origin = request.headers.get("origin", "")
+    if origin and CORS_ORIGIN_RE.fullmatch(origin):
+        return {
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Vary": "Origin",
+        }
+    return {}
+
+
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request: Request, exc: Exception):
+    log.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+        headers=_cors_headers(request),
+    )
+
+
+@app.exception_handler(HTTPException)
+async def _http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers={**(exc.headers or {}), **_cors_headers(request)},
+    )
 
 app.include_router(templates_api.router)
 app.include_router(crm_api.router)
