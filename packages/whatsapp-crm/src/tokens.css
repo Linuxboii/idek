@@ -1,0 +1,16 @@
+:root {
+  --crm-bg: #ffffff;
+  --crm-fg: #111827;
+  --crm-muted: #6b7280;
+  --crm-border: #e5e7eb;
+  --crm-accent: #f97316;
+  --crm-accent-fg: #ffffff;
+  --crm-bubble-me-bg: var(--crm-accent);
+  --crm-bubble-me-fg: var(--crm-accent-fg);
+  --crm-bubble-them-bg: #f3f4f6;
+  --crm-bubble-them-fg: var(--crm-fg);
+  --crm-input-bg: #ffffff;
+  --crm-input-border: var(--crm-border);
+  --crm-unread-bg: var(--crm-accent);
+  --crm-unread-fg: var(--crm-accent-fg);
+}

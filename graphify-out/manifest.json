@@ -1,0 +1,82 @@
+{
+  "C:\\Users\\paran\\OneDrive\\Documents\\Claude\\Projects\\n8n-python\\ecosystem.config.js": {
+    "mtime": 1778729539.0666304,
+    "hash": "842636148d23ff3bfbb17f0783ed7795"
+  },
+  "C:\\Users\\paran\\OneDrive\\Documents\\Claude\\Projects\\n8n-python\\schema.sql": {
+    "mtime": 1778727500.4418666,
+    "hash": "dd5d7113c0cdc64b633b3762ae3ffd48"
+  },
+  "C:\\Users\\paran\\OneDrive\\Documents\\Claude\\Projects\\n8n-python\\schema_templates.sql": {
+    "mtime": 1778730610.720137,
+    "hash": "332dce2dde752a402b5c8bf174c3962e"
+  },
+  "C:\\Users\\paran\\OneDrive\\Documents\\Claude\\Projects\\n8n-python\\vite.config.js": {
+    "mtime": 1778753586.6903832,
+    "hash": "b1cd81bb620d93d28ffc191bacddd45d"
+  },
+  "C:\\Users\\paran\\OneDrive\\Documents\\Claude\\Projects\\n8n-python\\app\\agent.py": {
+    "mtime": 1778727626.1081035,
+    "hash": "a83e6c8995287327a47a20883c4b5976"
+  },
+  "C:\\Users\\paran\\OneDrive\\Documents\\Claude\\Projects\\n8n-python\\app\\calendar_client.py": {
+    "mtime": 1778727666.9708085,
+    "hash": "f61d82c4f26323391c756e2f34facf7f"
+  },
+  "C:\\Users\\paran\\OneDrive\\Documents\\Claude\\Projects\\n8n-python\\app\\config.py": {
+    "mtime": 1778755285.5566745,
+    "hash": "5fc9e9ba68a0567e5f4c7c9aafa70ff7"
+  },
+  "C:\\Users\\paran\\OneDrive\\Documents\\Claude\\Projects\\n8n-python\\app\\db.py": {
+    "mtime": 1778730633.6066406,
+    "hash": "32e658a30687180e8a6dbeb61de5d8a6"
+  },
+  "C:\\Users\\paran\\OneDrive\\Documents\\Claude\\Projects\\n8n-python\\app\\extractor.py": {
+    "mtime": 1778727564.2869287,
+    "hash": "7b50797e2a281c8d40df02a6cc04308b"
+  },
+  "C:\\Users\\paran\\OneDrive\\Documents\\Claude\\Projects\\n8n-python\\app\\main.py": {
+    "mtime": 1778738908.2274609,
+    "hash": "4a2108492a43b83b5c2c7753a7414f6c"
+  },
+  "C:\\Users\\paran\\OneDrive\\Documents\\Claude\\Projects\\n8n-python\\app\\pipeline.py": {
+    "mtime": 1778727709.2937593,
+    "hash": "eb2439c0a280afc695471fc4585e7118"
+  },
+  "C:\\Users\\paran\\OneDrive\\Documents\\Claude\\Projects\\n8n-python\\app\\prompts.py": {
+    "mtime": 1778727608.0893652,
+    "hash": "eebd0a041b4bd3dccbad5c6fac510b52"
+  },
+  "C:\\Users\\paran\\OneDrive\\Documents\\Claude\\Projects\\n8n-python\\app\\templates_api.py": {
+    "mtime": 1778755304.9218726,
+    "hash": "c8c7329b708f5110ba254f96d4ef9064"
+  },
+  "C:\\Users\\paran\\OneDrive\\Documents\\Claude\\Projects\\n8n-python\\app\\whatsapp.py": {
+    "mtime": 1778755294.8176916,
+    "hash": "deebe75870c4a00c50f7c72ab1e2cd26"
+  },
+  "C:\\Users\\paran\\OneDrive\\Documents\\Claude\\Projects\\n8n-python\\app\\__init__.py": {
+    "mtime": 1778727507.489375,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "C:\\Users\\paran\\OneDrive\\Documents\\Claude\\Projects\\n8n-python\\CLAUDE.md": {
+    "mtime": 1778781609.3319895,
+    "hash": "4da1222ca9992ff8667860c0b67a2a21"
+  },
+  "C:\\Users\\paran\\OneDrive\\Documents\\Claude\\Projects\\n8n-python\\docker-compose.yml": {
+    "mtime": 1778727763.5746782,
+    "hash": "38c36bec0cf7325a5abee24d164f4044"
+  },
+  "C:\\Users\\paran\\OneDrive\\Documents\\Claude\\Projects\\n8n-python\\README.md": {
+    "mtime": 1778727849.9134293,
+    "hash": "9284698067d568f7af516923d3f35492"
+  },
+  "C:\\Users\\paran\\OneDrive\\Documents\\Claude\\Projects\\n8n-python\\requirements.txt": {
+    "mtime": 1778727459.3700593,
+    "hash": "42c48a248333ba044c0299428229a726"
+  },
+  "C:\\Users\\paran\\OneDrive\\Documents\\Claude\\Projects\\n8n-python\\app\\static\\index.html": {
+    "mtime": 1778755354.4365852,
+    "hash": "fd73451fe8c6b87fd82248f0843aa749"
+  }
+}

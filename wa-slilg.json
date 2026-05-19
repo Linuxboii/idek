@@ -1,0 +1,1006 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -624,
+        -112
+      ],
+      "id": "1da82dab-6c4d-43b2-be6d-79b7c0780f51",
+      "name": "WhatsApp Trigger",
+      "webhookId": "c2148ad2-18c2-40e3-9ac1-aec46cdf2470",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "mg0FejVr0XKlrK8I",
+          "name": "WhatsApp OAuth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"phone\": \"{{ $json.contacts[0].wa_id }}\",\n  \"name\": \"{{ $json.contacts[0].profile.name }}\",\n  \"message\": \"{{ $json.messages[0].text.body }}\",\n  \"Type\": \"{{ $json.messages[0].type }}\",\n  \"message2\": \"{{ $json.messages[0].text.body }}\",\n  \"referral\": \"{{ $json.messages[0].referral.source_url }}\",\n  \"referral_type\": \"{{ $json.messages[0].referral.source_type }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        144,
+        -208
+      ],
+      "id": "a54c4664-3614-49ba-9111-3eef1496c108",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('regex_data_extraction').item.json.message_text }}",
+        "options": {
+          "systemMessage": "=ROLE\n\nYou are Ananya, the dedicated relationship manager for Level Up, a premium 3BHK apartment project in Manikonda.\nYou represent only Level Up. Every reply must stay anchored to this project and this buying requirement.\nDo not discuss, compare, recommend, or provide guidance about any other project, property type, locality option, resale, rental, loan, legal matter, job query, or unrelated topic.\n\nKNOWN LEAD DATA\nName: {{ $('Merge').item.json.name }}\nPreferred Size: {{ $json.size_preference }}\nPreferred Location: {{ $json.preferred_locations }}\nFacing: {{ $('regex_data_extraction').item.json.facing }}\nBudget: {{ $('regex_data_extraction').item.json.budget_min }}\nEngagement Score: {{ $('regex_data_extraction').item.json.scoreDelta }}\ncurrent Date anmd time : {{ $json.currentDate }}\n\n<instructions>\nSTATE TRACKING (MANDATORY PRE-CHECK)\n1. If any field resolves to \"unknown\", null, empty string, or 0, treat it as NOT COLLECTED. Do not mention unknown values in your reply.\n2. The only lead qualification fields that matter are: Size, Location, Budget, and Facing.\n   - Note: \"Size\" refers to specific square footage variants available, not BHK configuration, since all units are 3BHK.\n3. A field is COLLECTED if:\n   - The KNOWN LEAD DATA has a non-unknown, non-null, non-empty value for it\n   - The user clearly stated a value for it anywhere in the CONVERSATION HISTORY\n   - The user confirmed or selected a value when you offered options\n4. Once collected from ANY source, a field is LOCKED. Update your internal state silently if the user voluntarily changes it later. Do not ask them to re-confirm.\n\nCurrent collected state example (derive this every turn before answering):\n- Facing: COLLECTED (value: east — from KNOWN LEAD DATA and reconfirmed in conversation)\n- Budget: COLLECTED (value: user selected \"Budget\" as the priority)\n- Size: NOT COLLECTED\n- Location: NOT COLLECTED\n\nANTI-REPETITION & QUESTION DISCIPLINE (HARD BLOCKERS)\nThese rules override all other logic.\n1. NEVER repeat the same conversational phrasing again and again. Keep your tone varied and natural.\n2. NEVER re-ask a field that is already COLLECTED. \n   - Once a data field has been collected, do not mention their specification again in your replies. Just accept it and move on.\n3. Before asking ANY qualification question, verify it is NOT COLLECTED. If it is collected, skip it. Do not rephrase a collected field as a new question.\n4. If ALL four fields are collected, your reply must contain zero qualification questions. Provide relevant info or offer a call.\n5. Maximum one question per message. Do not stack questions or interrogate. Do not ask just to keep the chat going.\n6. If your previous message asked a qualification question and the user did not answer it, DO NOT repeat the question immediately. \n   - Enforce this by counting the 'user:' messages in the CONVERSATION HISTORY. Wait until at least 3 user messages have passed before re-asking about a missing field (and use different wording).\n\nCORE PERSONALITY & CONVERSATION STYLE\n- Warm, polished, and confident. Sounds human, composed, and locally aware.\n- Consultative in tone, but commercially sharp underneath. Never robotic, never overly chatty.\n- Sound like a guided advisor, not a passive responder. Create the feeling of narrowing to suitable options.\n- Carry quiet authority in the way you speak. Be selective in tone, calm in delivery, and commercially aware without sounding pushy.\n- Acknowledge and Elevate: When the user shares a useful detail, acknowledge it naturally, signal you are refining for a better fit, and then answer or ask the next UNCOLLECTED field.\n- IDENTITY RULE: If the user asks who you are, answer as Ananya representing Level Up, a premium residential project in Manikonda.\n- CONTROLLED CHOICE STYLE: When a question is needed, prefer a guided choice over a vague open-ended ask. Keep choices tightly inside the allowed scope.\n\nPROJECT STATUS & TIMELINES\n- This project is currently under construction and not built yet. There is no immediate move-in available.\n- If a client asks about timelines, time of completion, or move-in dates, ALWAYS state that it is an under-construction project and provide NO timeline. Instead, push for a call.\n- If a user's timeline requirement strictly contradicts the under-construction status (e.g., they need immediate possession), acknowledge the mismatch politely before offering a call to discuss alternatives.\n\nKNOWLEDGE BOUNDARY & UNKNOWN ANSWERS\n- You must use only the information explicitly available in this prompt and confirmed user-provided lead data. \n- Never fabricate a number, feature, approval, timeline, specification, or promise.\n- If the user asks something you do not know or something not covered in this prompt: Do not answer the unknown part. Give a brief, polished dodge. \n- Whenever asked for anything that you do not have the information for, always push for a call to discuss further. Be polite and consultative, do not be too pushy. Redirect to a known Level Up detail when possible.\n\nOUT OF SCOPE & HARD BLOCKER BEHAVIOR\n- If the user message is out of scope or does not match the buying requirement: Do not follow them into that topic. Briefly acknowledge and pivot back to Level Up.\n- Shift into a sharper sales mode and gather qualification data (Size, Location, Budget, Facing).\n- Graceful Exit: If the user repeatedly ignores your pivots or insists on out-of-scope topics for more than 2 messages, gracefully disengage by offering to have a human expert call them, rather than continuing to force qualification.\n\nCALL SCHEDULING OVERRIDE (HIGHEST PRIORITY)\nTrigger this flow if either of these happens:\n- The user asks for a call, callback, phone discussion, or speaking later\n- The user asks you to send something you do not have or cannot share here (floor plans, brochure, images, location, map, etc.)\n\nStep 1: Immediate scheduling push\nIf the user has not yet provided a date and time:\n- Do not answer the original send request in detail. Do not say you will send it.\n- Reply only to schedule a call: \"Let's schedule a call to discuss further. Please share your preferred date and time.\"\n\nStep 2: JSON and Confirmation\nIf the current user message includes a callable date and time (or they reply with one):\n- Extract the date and time from the current user message only.\n- You MUST reply with exactly this sentence: \"Our team will reach out to you ASAP\"\n- Immediately following that sentence, return the exactly formatted JSON below. Do NOT wrap the JSON in Markdown code blocks (```). Output the raw JSON directly after the sentence.\n- Do not include any other greeting, explanation, label, markdown, code fence, or extra text.\n- Use timezone exactly as Asia/Kolkata. Never output a past date. Roll past weekdays forward. If date/time is missing, keep as empty string.\n\nReturn exactly this JSON shape:\n{\n  \"date\": \"\",\n  \"time\": \"\",\n  \"timezone\": \"Asia/Kolkata\"\n}\n\nCOLLECTION PRIORITY\nWhen deciding which uncollected field to ask next, follow this order:\n1. Location\n2. Budget\n3. Size\n4. Facing\nSkip any field that is already COLLECTED.\n</instructions>\n\nCONVERSATION HISTORY\n{{ $json.formatted_history }}\nCURRENT USER MESSAGE\n{{ $json.message_text }}\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        3632,
+        -112
+      ],
+      "id": "79fddc6f-988d-4662-a283-413cf071fa94",
+      "name": "AI Agent",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5.4-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5.4-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "maxTokens": 300
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        3600,
+        96
+      ],
+      "id": "dd1f42ae-ca1c-40fc-87a6-9276c09de851",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "KAe31aBP7NrxC2Be",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "991554947383777",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        4208,
+        -16
+      ],
+      "id": "f58d9397-0d20-4db4-9f15-414ccfb43c9d",
+      "name": "Send message1",
+      "webhookId": "437927a3-ec15-4475-8aa1-efff01737809",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "fXxvCLE1Dhptcy8M",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO messages (lead_id, role, message_text)\nVALUES ($1, 'assistant', $2)\nRETURNING *;",
+        "options": {
+          "queryReplacement": "={{ [ $('normalize_id_msg').item.json.id,  $json.clean_text] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4656,
+        -16
+      ],
+      "id": "fa0368a3-5901-4668-9fad-d743bf01bc47",
+      "name": "Execute a SQL query4",
+      "credentials": {
+        "postgres": {
+          "id": "KmL02NlUmo3D4ktK",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get raw value\nlet raw = $('If1').first().json.output;\n\n// Ensure it's a string\nlet text = (raw === null || raw === undefined) ? '' : String(raw);\n\n// Normalize whitespace\ntext = text\n  .replace(/\\r\\n/g, '\\n')     // normalize line breaks\n  .replace(/\\r/g, '\\n')\n  .replace(/\\t/g, ' ')        // tabs → spaces\n  .replace(/\\n+/g, ' ')       // collapse newlines\n  .replace(/\\s+/g, ' ')       // collapse multiple spaces\n  .trim();\n\n// Escape single quotes for PostgreSQL\ntext = text.replace(/'/g, \"''\");\n\n// Optional: remove problematic characters (keep basic punctuation)\ntext = text.replace(/[^\\x20-\\x7E]/g, ''); // remove non-ASCII\n\nreturn [\n  {\n    json: {\n      clean_text: text\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4432,
+        -16
+      ],
+      "id": "7693190e-35b0-4e81-8c30-8faa2c2f7274",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $json.messages[0].audio.id }}"
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -176,
+        -16
+      ],
+      "id": "b86987e7-d83d-456d-a341-73cfe14ada3d",
+      "name": "Download media",
+      "webhookId": "b2ceaa25-f397-4af6-9fc5-1744743268a2",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "fXxvCLE1Dhptcy8M",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f2c20ece-8150-4564-9480-57848e88dec4",
+              "leftValue": "={{ $json.messages[0].type }}",
+              "rightValue": "text",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -400,
+        -112
+      ],
+      "id": "1cbfb203-6c45-477c-abc8-54f940159ae6",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Download media').item.json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer EAAkFRTgk1CsBRHSljHWN7zqeeZCKB3t5vSsTWRx1O2TZAmm2XNH4SBZCgygAaiBhluJOQIzZAmKQpGS9ZBm5HLA7w6w0h0JAAQZBjFLDxYAePeh5NzW6hZB9Db4UPnehnF1itsAHy0UocZCj6aL7BqZCeyI2cU7EL0EBCTEuEmZB6BucrnEXX7SxwKy342SZCmdiwZDZD"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        48,
+        -16
+      ],
+      "id": "e497f647-6110-4968-9ff4-47b010486017",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        272,
+        -16
+      ],
+      "id": "d2aaa050-2ece-4d03-aef6-41fc1b22a287",
+      "name": "Transcribe a recording",
+      "credentials": {
+        "openAiApi": {
+          "id": "KAe31aBP7NrxC2Be",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c314b01d-61ad-4010-83b8-ff471116a63e",
+              "name": "name",
+              "value": "={{ $('WhatsApp Trigger').item.json.contacts[0].profile.name }}",
+              "type": "string"
+            },
+            {
+              "id": "6c1fdf89-2d7a-44c9-a9c7-ae05043baa1d",
+              "name": "phone",
+              "value": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+              "type": "string"
+            },
+            {
+              "id": "8c67e0c5-4b7c-4300-bad6-0e6f3d3b60cf",
+              "name": "message",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        496,
+        -16
+      ],
+      "id": "169c445f-ecbb-4ca2-b90d-8ea8fdd1146d",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        720,
+        -112
+      ],
+      "id": "093276fc-f0b1-499f-88e2-3d870cbf0009",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4d821fc8-10b5-4e35-a005-baf42a7d67bc",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "{",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3984,
+        -112
+      ],
+      "id": "b1484682-d828-4e75-b5c1-7017aa0f9d4d",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = items[0].json.output; // ← your AI output field\n\n// ---------------- PARSE STRING TO JSON ----------------\nlet input;\n\ntry {\n  input = typeof raw === \"string\" ? JSON.parse(raw) : raw;\n} catch (e) {\n  throw new Error(\"AI output is not valid JSON\");\n}\n\n// ---------------- VALIDATION ----------------\nif (!input.date || !input.time) {\n  throw new Error(\"Missing date or time from AI output\");\n}\n\n// ---------------- BUILD DATETIME ----------------\nconst date = input.date;\nconst time = input.time;\n\nconst timeWithSeconds = time.length === 5 ? `${time}:00` : time;\n\n// Asia/Kolkata fixed offset\nconst timezoneOffset = \"+05:30\";\n\n// ---------------- START ----------------\nconst startISO = `${date}T${timeWithSeconds}${timezoneOffset}`;\n\n// ---------------- END (+30 mins) ----------------\nconst startDateObj = new Date(`${date}T${timeWithSeconds}${timezoneOffset}`);\nconst endDateObj = new Date(startDateObj.getTime() + 30 * 60000);\n\nfunction toLocalISO(dateObj) {\n  const pad = (n) => String(n).padStart(2, '0');\n\n  return (\n    dateObj.getFullYear() + \"-\" +\n    pad(dateObj.getMonth() + 1) + \"-\" +\n    pad(dateObj.getDate()) + \"T\" +\n    pad(dateObj.getHours()) + \":\" +\n    pad(dateObj.getMinutes()) + \":\" +\n    pad(dateObj.getSeconds()) +\n    timezoneOffset\n  );\n}\n\nconst endISO = toLocalISO(endDateObj);\n\n// ---------------- OUTPUT ----------------\nreturn [{\n  json: {\n    startISO,\n    endISO\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4208,
+        -208
+      ],
+      "id": "fa6e0f89-132a-424d-9f29-67b18f3cbf82",
+      "name": "Code in JavaScript4"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "spacelink2016.digital@gmail.com",
+          "mode": "list",
+          "cachedResultName": "spacelink2016.digital@gmail.com"
+        },
+        "start": "={{ $json.startISO }}",
+        "end": "={{ $json.endISO }}",
+        "additionalFields": {
+          "conferenceDataUi": {
+            "conferenceDataValues": {
+              "conferenceSolution": "hangoutsMeet"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        4432,
+        -208
+      ],
+      "id": "18202b54-5081-4403-ae09-550701b705a2",
+      "name": "Create an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "JcIStBMPdwLPPiqs",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        3184,
+        -112
+      ],
+      "id": "cc29e795-7314-4a6e-b468-ded90b6681dc",
+      "name": "Date & Time"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "991554947383777",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}",
+        "textBody": "=Your call has been scheduled! our team will reach out to you shortly, You may use this gmeet link to join the meet\n{{ $json.hangoutLink }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        4656,
+        -208
+      ],
+      "id": "9162fb07-29f3-4e35-84e0-8a51a03eb9c7",
+      "name": "Send message",
+      "webhookId": "5b5e91c5-39da-44da-8c2d-ba2f0c136d13",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "fXxvCLE1Dhptcy8M",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const type = $('Merge').first().json.message;\n\nlet finalMessage = $json.message;\n\nif (!finalMessage || finalMessage.trim() === \"\") {\n  finalMessage = \"[Empty message]\";\n}\n\nreturn [{\n  ...$json,\n  final_message: finalMessage\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1616,
+        -112
+      ],
+      "id": "eddd6bbf-bef1-4127-9bfa-5876894a75b0",
+      "name": "Check for empty messages"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO leads (\n  phone,\n  name,\n  source,\n  campaign,\n  adset,\n  ad,\n  source_raw,\n  last_message_at,\n  message_count\n)\nVALUES (\n  RIGHT(REGEXP_REPLACE($1, '\\D', '', 'g'), 10),\n  $2,\n\n  CASE \n    WHEN $3 = 'ad' THEN 'Facebook Ads'\n    ELSE 'WhatsApp'\n  END,\n\n  $4,\n  $5,\n  $6,\n  $7::jsonb,\n\n  NOW(),\n  1\n)\n\nON CONFLICT (phone)\nDO UPDATE SET\n  name = EXCLUDED.name,\n  last_message_at = NOW(),\n  message_count = leads.message_count + 1,\n\n  -- 🔒 only set source if empty\n  source = CASE \n    WHEN leads.source IS NULL OR leads.source = 'unknown'\n    THEN EXCLUDED.source\n    ELSE leads.source\n  END;",
+        "options": {
+          "queryReplacement": "={{\n[\n  $json.phone,\n  $json.name,\n  $json.referral_type,\n  $json.referral,         // campaign (URL for now)\n  null,                   // adset (not available yet)\n  null,                   // ad (not available yet)\n  $json                  // full raw payload\n]\n}}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        944,
+        -112
+      ],
+      "id": "45ceed23-e375-4e59-bf38-2a7dc39f4505",
+      "name": "Enter all the lead data",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "KmL02NlUmo3D4ktK",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  id,\n  score,\n  escalated\nFROM leads\nWHERE phone = RIGHT(REGEXP_REPLACE($1, '\\D', '', 'g'), 10)\nLIMIT 1;",
+        "options": {
+          "queryReplacement": "={{ $('Merge').item.json.phone }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1168,
+        -112
+      ],
+      "id": "f6def1d4-c559-46c2-8fb6-4635a37d6550",
+      "name": "Lead_score",
+      "credentials": {
+        "postgres": {
+          "id": "KmL02NlUmo3D4ktK",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2a0c4cde-e20f-4912-a902-574bbeba0a0e",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "30fb3458-1b60-4cc3-a143-5cce50358bfb",
+              "name": "message",
+              "value": "={{ $('Merge').item.json.message }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "ignoreConversionErrors": true
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1392,
+        -112
+      ],
+      "id": "edaf57c9-e239-4901-86fc-f7be08d36afd",
+      "name": "normalize_id_msg"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO messages (lead_id, role, message_text)\nVALUES ($1, 'user', $2);",
+        "options": {
+          "queryReplacement": "={{ $json.id }}, {{ $json.final_message }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1840,
+        -112
+      ],
+      "id": "39dcacbf-ec63-47b1-8407-baaeb5595c9b",
+      "name": "append_id_msg",
+      "credentials": {
+        "postgres": {
+          "id": "KmL02NlUmo3D4ktK",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT role, message_text\nFROM messages\nWHERE lead_id = $1\nORDER BY created_at DESC\nLIMIT 5;",
+        "options": {
+          "queryReplacement": "={{ $('normalize_id_msg').item.json.id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2064,
+        -112
+      ],
+      "id": "f1dc602a-cfab-45bb-b5e2-067d50618e3c",
+      "name": "get_msg_txt",
+      "credentials": {
+        "postgres": {
+          "id": "KmL02NlUmo3D4ktK",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = ($json.message || $json.message_text || \"\").toLowerCase();\n\n// ---------------- NORMALIZATION ----------------\nconst msg = raw\n  .replace(/[,₹]/g, \" \")\n  .replace(/crores?/g, \"cr\")\n  .replace(/rs\\.?/g, \"\")\n  .replace(/\\s+/g, \" \")\n  .trim();\n\n// ---------------- INIT ----------------\nlet size_preference = null;\nlet preferred_locations = null;\nlet facing = null;\nlet budget_min = null;\nlet budget_max = null;\nlet budget_estimate = null;\nlet scoreDelta = 0;\n\n// Qualification flags\nlet sizeQualified = false;\nlet facingQualified = false;\nlet locationQualified = false;\nlet budgetQualified = false;\n\n// =======================================================\n// ---------------- SIZE EXTRACTION ----------------\n// =======================================================\n\nlet sizeText = msg.replace(/to/g, \"-\");\n\n// RANGE (1800-2200, 18-19, 18to1900)\nlet sizeRangeMatch = sizeText.match(/(\\d{2,4})\\s*-\\s*(\\d{2,4})/);\n\nif (sizeRangeMatch) {\n  let min = parseInt(sizeRangeMatch[1]);\n  let max = parseInt(sizeRangeMatch[2]);\n\n  // shorthand fix (18 → 1800)\n  if (min < 100) min *= 100;\n  if (max < 100) max *= 100;\n\n  // fix reversed\n  if (min > max) [min, max] = [max, min];\n\n  size_preference = `${min}-${max}`;\n\n  if (min >= 2365 && max <= 3105) {\n    sizeQualified = true;\n    scoreDelta += 25;\n  } else {\n    scoreDelta -= 10;\n  }\n}\n\n// SINGLE VALUE\nelse {\n  let singleMatch = sizeText.match(/\\b(\\d{2,4})\\b/);\n\n  if (singleMatch) {\n    let val = parseInt(singleMatch[1]);\n\n    if (val < 100) val *= 100;\n\n    size_preference = val;\n\n    if (val >= 2365 && val <= 3105) {\n      sizeQualified = true;\n      scoreDelta += 25;\n    } else {\n      scoreDelta -= 10;\n    }\n  }\n}\n\n// =======================================================\n// ---------------- FACING ----------------\n// =======================================================\n\nconst facingPatterns = [\n  \"north east\", \"north west\", \"south east\", \"south west\",\n  \"east\", \"west\", \"north\", \"south\"\n];\n\nfor (const f of facingPatterns) {\n  if (msg.includes(f)) {\n    facing = f.replace(/\\s+/g, '-');\n\n    if (f === \"east\" || f === \"west\") {\n      facingQualified = true;\n      scoreDelta += 15;\n    } else {\n      scoreDelta -= 5;\n    }\n    break;\n  }\n}\n\n// =======================================================\n// ---------------- BUDGET ----------------\n// =======================================================\n\n// RANGE (1-1.2cr, 1 to 1.2 cr)\nlet rangeMatch = msg.match(/(\\d+(\\.\\d+)?)\\s*(?:-|to)\\s*(\\d+(\\.\\d+)?)(?:\\s*)cr/);\n\n// SINGLE (2cr, 1.5 cr)\nlet singleMatch = msg.match(/(\\d+(\\.\\d+)?)(?:\\s*)cr/);\n\n// LAKH (80 lakh)\nlet lakhMatch = msg.match(/(\\d+(\\.\\d+)?)(?:\\s*)lakh/);\n\nif (rangeMatch) {\n  budget_min = parseFloat(rangeMatch[1]);\n  budget_max = parseFloat(rangeMatch[3]);\n  budget_estimate = (budget_min + budget_max) / 2;\n\n  if (budget_max >= 2.25) {\n    budgetQualified = true;\n    scoreDelta += 25;\n  } else {\n    scoreDelta -= 15;\n  }\n\n} else if (singleMatch) {\n  budget_estimate = parseFloat(singleMatch[1]);\n\n  if (budget_estimate >= 2.25) {\n    budgetQualified = true;\n    scoreDelta += 25;\n  } else {\n    scoreDelta -= 15;\n  }\n\n} else if (lakhMatch) {\n  const val = parseFloat(lakhMatch[1]) / 100;\n  budget_estimate = parseFloat(val.toFixed(2));\n\n  if (budget_estimate >= 2.25) {\n    budgetQualified = true;\n    scoreDelta += 25;\n  } else {\n    scoreDelta -= 15;\n  }\n}\n\n// =======================================================\n// ---------------- LOCATION ----------------\n// =======================================================\n\nlet locText = msg\n  .replace(/[^a-z\\s]/g, \" \")\n  .replace(/\\s+/g, \" \")\n  .trim();\n\n// canonical mapping + typo tolerance\nconst locationMap = {\n  \"manikonda\": [\"manikonda\"],\n  \"puppalaguda\": [\"puppalaguda\", \"puppalguda\", \"pupplagudda\", \"puplaguda\"],\n  \"gachibowli\": [\"gachibowli\", \"gachiboli\"],\n  \"kondapur\": [\"kondapur\"],\n  \"kokapet\": [\"kokapet\"],\n  \"narsingi\": [\"narsingi\"],\n  \"madhapur\": [\"madhapur\"],\n  \"financial district\": [\"financial district\", \"fin dist\"]\n};\n\nfor (const [canonical, variants] of Object.entries(locationMap)) {\n  for (const variant of variants) {\n    if (locText.includes(variant)) {\n      preferred_locations = canonical;\n      break;\n    }\n  }\n  if (preferred_locations) break;\n}\n\n// intent-based\nif (!preferred_locations) {\n  if (locText.includes(\"any\") || locText.includes(\"open\")) {\n    preferred_locations = \"flexible\";\n  }\n}\n\n// fallback (short message likely location)\nif (!preferred_locations) {\n  if (locText.split(\" \").length <= 3) {\n    preferred_locations = locText;\n  }\n}\n\n// qualification\nif (preferred_locations === \"manikonda\") {\n  locationQualified = true;\n  scoreDelta += 20;\n} else if (preferred_locations) {\n  scoreDelta -= 10;\n}\n\n// =======================================================\n// ---------------- SCORE CLAMP ----------------\n// =======================================================\n\nscoreDelta = Math.max(0, Math.min(100, scoreDelta));\n\n// =======================================================\n// ---------------- OUTPUT ----------------\n// =======================================================\n\nreturn [\n  {\n    ...$json,\n    message_text: raw,\n    size_preference,\n    preferred_locations,\n    facing,\n    budget_min,\n    budget_max,\n    budget_estimate,\n    scoreDelta,\n    qualification: {\n      sizeQualified,\n      facingQualified,\n      locationQualified,\n      budgetQualified\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2288,
+        -112
+      ],
+      "id": "7b8ac406-afae-49da-a877-ef71f96752ac",
+      "name": "regex_data_extraction"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE leads\nSET\n  score = LEAST(100, score + COALESCE($2, 0)),\n  size_preference = COALESCE($3, size_preference),\n  facing = COALESCE($4, facing),\n  preferred_locations = COALESCE($5, preferred_locations),\n  budget_min = COALESCE($6, budget_min),\n  budget_max = COALESCE($7, budget_max),\n  budget_estimate = COALESCE($8, budget_estimate)\nWHERE id = $1;",
+        "options": {
+          "queryReplacement": "={{\n[\n  $node[\"Enter all the lead data\"].json.id ?? null,\n  $json.scoreDelta ?? 0,\n  $json.size_preference ?? null,\n  $json.facing ?? null,\n $json.preferred_locations \n    ? (Array.isArray($json.preferred_locations) \n        ? $json.preferred_locations \n        : [$json.preferred_locations])\n    : null,\n  $json.budget_min ?? null,\n  $json.budget_max ?? null,\n  $json.budget_estimate ?? null\n]\n}}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2512,
+        -112
+      ],
+      "id": "8adede75-ec68-4dda-911b-11bc60a47c7a",
+      "name": "updating_lead_data",
+      "credentials": {
+        "postgres": {
+          "id": "KmL02NlUmo3D4ktK",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT role, message_text, created_at\nFROM (\n  SELECT role, message_text, created_at\n  FROM messages\n  WHERE lead_id = $1\n  ORDER BY created_at DESC\n  LIMIT 5\n) sub\nORDER BY created_at ASC;",
+        "options": {
+          "queryReplacement": "={{ $('normalize_id_msg').item.json.id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2736,
+        -112
+      ],
+      "id": "f989069f-17ac-459e-89c0-7481668fe5bc",
+      "name": "Message_history",
+      "executeOnce": true,
+      "alwaysOutputData": false,
+      "credentials": {
+        "postgres": {
+          "id": "KmL02NlUmo3D4ktK",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const messages = $input.all().map(item => item.json);\n\nconst formatted = messages\n  .map(m => `${m.role}: ${m.message_text}`)\n  .join('\\n');\n\nreturn [\n  {\n    formatted_history: formatted\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2960,
+        -112
+      ],
+      "id": "dc7d1870-6c6a-4743-abf9-b11782e1fed1",
+      "name": "format_history"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9c042534-7944-43e3-a8a1-de9c143dae4a",
+              "name": "formatted_history",
+              "value": "={{ $('format_history').item.json.formatted_history }}",
+              "type": "string"
+            },
+            {
+              "id": "77550572-5220-45df-a0d5-51300ffceebd",
+              "name": "size_preference",
+              "value": "={{ $('regex_data_extraction').item.json.size_preference }}",
+              "type": "number"
+            },
+            {
+              "id": "948696ed-7bc7-4e7f-960e-67276308f29b",
+              "name": "preferred_locations",
+              "value": "={{ $('regex_data_extraction').item.json.preferred_locations }}",
+              "type": "string"
+            },
+            {
+              "id": "004e665c-229c-49f7-908d-52115275e032",
+              "name": "message_text",
+              "value": "={{ $('regex_data_extraction').item.json.message_text }}",
+              "type": "string"
+            },
+            {
+              "id": "726b7103-2413-45d9-b760-416ef377b272",
+              "name": "facing",
+              "value": "={{ $('regex_data_extraction').item.json.facing }}",
+              "type": "string"
+            },
+            {
+              "id": "7746ce2b-3069-4ede-8382-d411ef648260",
+              "name": "budget_estimate",
+              "value": "={{ $('regex_data_extraction').item.json.budget_estimate }}",
+              "type": "string"
+            },
+            {
+              "id": "22cb8835-4925-487c-aec6-d4eca9865c37",
+              "name": "scoreDelta",
+              "value": "={{ $('regex_data_extraction').item.json.scoreDelta }}",
+              "type": "number"
+            },
+            {
+              "id": "7c8a2e71-4368-4a63-8329-bf83a9aa5c06",
+              "name": "currentDate",
+              "value": "={{ $json.currentDate }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3408,
+        -112
+      ],
+      "id": "8eb7bc51-c98e-4b58-9b65-43b4cdbc2d59",
+      "name": "Normalize_all_fileds"
+    }
+  ],
+  "connections": {
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download media": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Download media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Transcribe a recording",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe a recording": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Enter all the lead data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript4": {
+      "main": [
+        [
+          {
+            "node": "Create an event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event": {
+      "main": [
+        [
+          {
+            "node": "Send message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time": {
+      "main": [
+        [
+          {
+            "node": "Normalize_all_fileds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for empty messages": {
+      "main": [
+        [
+          {
+            "node": "append_id_msg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enter all the lead data": {
+      "main": [
+        [
+          {
+            "node": "Lead_score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead_score": {
+      "main": [
+        [
+          {
+            "node": "normalize_id_msg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "normalize_id_msg": {
+      "main": [
+        [
+          {
+            "node": "Check for empty messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "append_id_msg": {
+      "main": [
+        [
+          {
+            "node": "get_msg_txt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_msg_txt": {
+      "main": [
+        [
+          {
+            "node": "regex_data_extraction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "regex_data_extraction": {
+      "main": [
+        [
+          {
+            "node": "updating_lead_data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "updating_lead_data": {
+      "main": [
+        [
+          {
+            "node": "Message_history",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message_history": {
+      "main": [
+        [
+          {
+            "node": "format_history",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format_history": {
+      "main": [
+        [
+          {
+            "node": "Date & Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize_all_fileds": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7853eb95abb67fd15b375b85977ab8e9d25b20624047832458b5f69b0ce09c6a"
+  }
+}

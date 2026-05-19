@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>WA Template Sender</title>
+<style>
+  :root {
+    --bg:#0f1115; --panel:#171a21; --text:#e6e6e6; --muted:#8a8f99;
+    --accent:#25d366; --err:#ff5a5f; --ok:#3ddc97; --warn:#f0b341;
+    --info:#5fa9f8; --border:#23272f;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.5 -apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
+  .wrap { max-width:1000px; margin:32px auto; padding:0 16px; }
+  h1 { font-size:20px; margin:0 0 16px; }
+  h2 { font-size:15px; margin:0 0 12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  .panel { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:16px; }
+  label { display:block; font-size:12px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em; }
+  input, textarea, select {
+    width:100%; background:#0b0d12; color:var(--text); border:1px solid var(--border);
+    border-radius:8px; padding:10px 12px; font:inherit;
+  }
+  textarea { min-height:120px; resize:vertical; font-family:ui-monospace,Consolas,monospace; }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .field { margin-bottom:14px; }
+  button {
+    background:var(--accent); color:#06140b; border:0; padding:10px 16px;
+    border-radius:8px; font-weight:600; cursor:pointer; font-size:14px;
+  }
+  button.ghost { background:transparent; color:var(--text); border:1px solid var(--border); }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .summary { display:flex; flex-wrap:wrap; gap:18px; margin-bottom:12px; font-weight:600; font-size:13px; }
+  .summary span { padding:6px 10px; border-radius:6px; background:#0b0d12; }
+  .summary .ok { color:var(--ok); } .summary .fail { color:var(--err); }
+  .summary .pending { color:var(--warn); } .summary .read { color:var(--info); }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top; }
+  th { color:var(--muted); font-weight:500; font-size:11px; text-transform:uppercase; }
+  .badge { padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; display:inline-block; }
+  .badge.queued, .badge.accepted { background:#2a2510; color:var(--warn); }
+  .badge.sent { background:#0f2a3a; color:var(--info); }
+  .badge.delivered { background:#0f3a26; color:var(--ok); }
+  .badge.read { background:#0f3a3a; color:#7ee7e0; }
+  .badge.failed { background:#3a0f12; color:var(--err); }
+  .hint { color:var(--muted); font-size:12px; margin-top:4px; }
+  .bar { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+  .meta { color:var(--muted); font-size:12px; }
+  details pre { font-size:11px; background:#0b0d12; padding:8px; border-radius:6px; overflow-x:auto; max-width:520px; }
+  .jobs-list { display:flex; flex-direction:column; gap:6px; }
+  .jobs-list .item {
+    display:grid; grid-template-columns: 1fr auto auto; gap:12px;
+    padding:10px 12px; background:#0b0d12; border-radius:8px; cursor:pointer;
+    border:1px solid transparent;
+  }
+  .jobs-list .item:hover { border-color:var(--border); }
+  .jobs-list .item.active { border-color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>WhatsApp Template Sender</h1>
+
+  <div class="panel">
+    <div class="field">
+      <label>Admin Token</label>
+      <input id="token" type="password" placeholder="ADMIN_TOKEN from .env" autocomplete="off" />
+      <div class="hint">Stored only in browser memory.</div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Template Name</label>
+        <select id="template_name"><option value="">Loading templates…</option></select>
+      </div>
+      <div class="field">
+        <label>Language Code</label>
+        <input id="language_code" value="en_US" readonly />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Body Parameters (one per line, order matches {{1}}, {{2}}, …)</label>
+      <textarea id="body_params" placeholder="John&#10;Saturday 4pm"></textarea>
+    </div>
+
+    <div class="field">
+      <label>Phone Numbers (one per line, E.164 with country code, e.g. 919876543210)</label>
+      <textarea id="numbers" placeholder="919876543210&#10;919812345678"></textarea>
+    </div>
+
+    <button id="send">Send</button>
+    <button id="refresh_jobs" class="ghost" style="margin-left:8px">Refresh Jobs</button>
+  </div>
+
+  <div class="panel">
+    <h2>Recent Jobs</h2>
+    <div id="jobs" class="jobs-list"></div>
+  </div>
+
+  <div class="panel" id="results" style="display:none">
+    <div class="bar">
+      <h2 id="job_title" style="margin:0">Job</h2>
+      <span class="meta" id="job_meta"></span>
+      <span style="flex:1"></span>
+      <button id="auto_refresh" class="ghost">Auto-refresh: ON</button>
+    </div>
+    <div class="summary" id="summary"></div>
+    <table>
+      <thead><tr><th>Phone</th><th>Status</th><th>Wamid</th><th>Detail / Timestamps</th></tr></thead>
+      <tbody id="r_body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const API_BASE = "https://wa-slilg.avlokai.com";
+  let currentJobId = null;
+  let pollTimer = null;
+  let autoRefresh = true;
+
+  // Persist token to localStorage
+  function getToken() {
+    const t = $("token").value.trim();
+    if (!t) { alert("Token required"); throw new Error("no token"); }
+    localStorage.setItem("wa_admin_token", t);
+    return t;
+  }
+
+  function authHeaders() {
+    return { "Authorization": "Bearer " + getToken() };
+  }
+
+  let templateCache = [];
+
+  async function loadTemplates() {
+    const sel = $("template_name");
+    try {
+      const res = await fetch(API_BASE + "/api/templates", { headers: authHeaders() });
+      if (!res.ok) throw new Error("fetch failed");
+      const data = await res.json();
+      templateCache = data.templates || [];
+      while (sel.firstChild) sel.removeChild(sel.firstChild);
+      if (!templateCache.length) {
+        sel.appendChild(el("option", { text: "No templates found" }));
+        return;
+      }
+      const seen = new Map();
+      for (const t of templateCache) {
+        const key = t.name + "|" + t.language;
+        if (!seen.has(key)) {
+          seen.set(key, t);
+          const opt = document.createElement("option");
+          opt.value = key;
+          opt.textContent = t.name + " (" + t.language + ")";
+          sel.appendChild(opt);
+        }
+      }
+      updateLangFromSelection();
+    } catch {
+      while (sel.firstChild) sel.removeChild(sel.firstChild);
+      sel.appendChild(el("option", { text: "Failed to load templates" }));
+    }
+  }
+
+  function updateLangFromSelection() {
+    const val = $("template_name").value;
+    if (!val) return;
+    const [, lang] = val.split("|");
+    if (lang) $("language_code").value = lang;
+  }
+
+  $("template_name").addEventListener("change", updateLangFromSelection);
+
+  // Restore token + auto-load on page start
+  (function init() {
+    const saved = localStorage.getItem("wa_admin_token");
+    if (saved) {
+      $("token").value = saved;
+      loadTemplates().catch(() => {});
+      loadJobs().catch(() => {});
+    }
+  })();
+
+  $("send").addEventListener("click", async () => {
+    const numbers = $("numbers").value.split(/[\s,;]+/).map(s => s.trim()).filter(Boolean);
+    if (!numbers.length) return alert("Enter at least one number");
+    const body_params = $("body_params").value.split(/\n/).map(s => s.trim()).filter(Boolean);
+    const selVal = $("template_name").value;
+    const tplName = selVal.includes("|") ? selVal.split("|")[0] : selVal.trim();
+    const payload = {
+      numbers,
+      template_name: tplName,
+      language_code: $("language_code").value.trim() || "en_US",
+      body_params,
+    };
+    if (!payload.template_name) return alert("Template name required");
+
+    const btn = $("send");
+    btn.disabled = true;
+    btn.textContent = "Sending…";
+    try {
+      const res = await fetch(API_BASE + "/api/send-template", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert("Error: " + (data.detail || res.statusText));
+        return;
+      }
+      await loadJobs();
+      selectJob(data.job_id);
+    } catch (e) {
+      alert("Error: " + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Send";
+    }
+  });
+
+  $("refresh_jobs").addEventListener("click", () => loadJobs().catch(e => alert(e.message)));
+
+  // Auto-refresh jobs list every 60s
+  setInterval(() => {
+    try { loadJobs().catch(() => {}); } catch {}
+  }, 60000);
+
+  $("auto_refresh").addEventListener("click", () => {
+    autoRefresh = !autoRefresh;
+    $("auto_refresh").textContent = "Auto-refresh: " + (autoRefresh ? "ON" : "OFF");
+    if (autoRefresh && currentJobId) startPoll(); else stopPoll();
+  });
+
+  async function loadJobs() {
+    const res = await fetch(API_BASE + "/api/jobs?limit=25", { headers: authHeaders() });
+    if (!res.ok) throw new Error("jobs fetch failed");
+    const data = await res.json();
+    renderJobsList(data.jobs || []);
+  }
+
+  function renderJobsList(jobs) {
+    const c = $("jobs");
+    while (c.firstChild) c.removeChild(c.firstChild);
+    if (!jobs.length) {
+      c.appendChild(el("div", { className: "hint", text: "No jobs yet." }));
+      return;
+    }
+    for (const j of jobs) {
+      const item = el("div", { className: "item" + (j.id === currentJobId ? " active" : "") });
+      const left = document.createElement("div");
+      left.appendChild(el("div", { text: j.template_name + "  (" + j.language_code + ")" }));
+      left.appendChild(el("div", { className: "meta", text: new Date(j.created_at).toLocaleString() + "  ·  total " + j.total }));
+      item.appendChild(left);
+
+      const mid = el("div", { className: "meta" });
+      mid.appendChild(el("span", { className: "badge delivered", text: "D " + (j.delivered || 0) }));
+      mid.appendChild(document.createTextNode(" "));
+      mid.appendChild(el("span", { className: "badge read", text: "R " + (j.read || 0) }));
+      mid.appendChild(document.createTextNode(" "));
+      mid.appendChild(el("span", { className: "badge failed", text: "F " + (j.failed || 0) }));
+      mid.appendChild(document.createTextNode(" "));
+      mid.appendChild(el("span", { className: "badge queued", text: "P " + (j.pending || 0) }));
+      item.appendChild(mid);
+
+      const btn = el("button", { className: "ghost", text: "Open" });
+      btn.addEventListener("click", (ev) => { ev.stopPropagation(); selectJob(j.id); });
+      item.appendChild(btn);
+
+      item.addEventListener("click", () => selectJob(j.id));
+      c.appendChild(item);
+    }
+  }
+
+  async function selectJob(jobId) {
+    currentJobId = jobId;
+    $("results").style.display = "block";
+    $("job_title").textContent = "Job " + jobId.slice(0, 8);
+    document.querySelectorAll(".jobs-list .item").forEach(i => i.classList.remove("active"));
+    await refreshJob();
+    if (autoRefresh) startPoll();
+  }
+
+  function startPoll() {
+    stopPoll();
+    pollTimer = setInterval(() => refreshJob().catch(() => {}), 3000);
+  }
+
+  function stopPoll() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  }
+
+  async function refreshJob() {
+    if (!currentJobId) return;
+    const res = await fetch(API_BASE + "/api/jobs/" + currentJobId, { headers: authHeaders() });
+    if (!res.ok) {
+      stopPoll();
+      throw new Error("job fetch failed");
+    }
+    const data = await res.json();
+    renderJob(data);
+    // also refresh list counts
+    loadJobs().catch(() => {});
+  }
+
+  function renderJob(data) {
+    const s = data.summary || {};
+    const meta = data.job;
+    $("job_meta").textContent =
+      meta.template_name + " · " + meta.language_code + " · " +
+      new Date(meta.created_at).toLocaleString() + " · " + meta.total + " recipients";
+
+    const sm = $("summary");
+    while (sm.firstChild) sm.removeChild(sm.firstChild);
+    const cells = [
+      ["queued", "Queued"], ["accepted", "Accepted"], ["sent", "Sent"],
+      ["delivered", "Delivered", "ok"], ["read", "Read", "read"],
+      ["failed", "Failed", "fail"],
+    ];
+    for (const [k, label, cls] of cells) {
+      sm.appendChild(el("span", { className: cls || "", text: label + ": " + (s[k] || 0) }));
+    }
+
+    const tb = $("r_body");
+    while (tb.firstChild) tb.removeChild(tb.firstChild);
+    for (const r of data.sends || []) {
+      const tr = document.createElement("tr");
+      tr.appendChild(el("td", { text: r.to_phone }));
+
+      const stTd = document.createElement("td");
+      stTd.appendChild(el("span", {
+        className: "badge " + (r.status || "queued"),
+        text: (r.status || "queued").toUpperCase(),
+      }));
+      tr.appendChild(stTd);
+
+      tr.appendChild(el("td", { text: r.wamid || "—" }));
+
+      const detTd = document.createElement("td");
+      if (r.error_message) {
+        detTd.appendChild(el("div", { text: "Error: " + r.error_message }));
+      }
+      const ts = [
+        r.sent_at && "sent " + fmt(r.sent_at),
+        r.delivered_at && "delivered " + fmt(r.delivered_at),
+        r.read_at && "read " + fmt(r.read_at),
+        r.failed_at && "failed " + fmt(r.failed_at),
+      ].filter(Boolean).join(" · ");
+      if (ts) detTd.appendChild(el("div", { className: "meta", text: ts }));
+      tr.appendChild(detTd);
+
+      tb.appendChild(tr);
+    }
+  }
+
+  function fmt(iso) {
+    try { return new Date(iso).toLocaleTimeString(); } catch { return iso; }
+  }
+
+  function el(tag, opts = {}, ...children) {
+    const node = document.createElement(tag);
+    if (opts.className) node.className = opts.className;
+    if (opts.text != null) node.textContent = opts.text;
+    for (const c of children) {
+      if (c == null) continue;
+      node.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+    }
+    return node;
+  }
+</script>
+</body>
+</html>

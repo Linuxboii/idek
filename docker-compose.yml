@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: levelup
+      POSTGRES_PASSWORD: levelup
+      POSTGRES_DB: levelup
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://levelup:levelup@db:5432/levelup
+    depends_on:
+      - db
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./secrets:/app/secrets:ro
+
+volumes:
+  pgdata:
