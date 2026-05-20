@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import Depends, HTTPException, Query, status
+from fastapi import Depends, HTTPException, Query, status, Header
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -79,6 +79,41 @@ async def get_ws_user(token: str = Query(...)) -> dict:
     role = payload.get("role")
     if not sub or not role:
         raise HTTPException(status_code=403, detail="Invalid token")
+    return {"id": sub, "role": role, "name": payload.get("name", "")}
+
+
+async def get_media_user(
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+) -> dict:
+    actual_token = token
+    if authorization and authorization.lower().startswith("bearer "):
+        actual_token = authorization.split(" ")[1]
+
+    if not actual_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing token",
+        )
+
+    if actual_token == settings.ADMIN_TOKEN:
+        return _ADMIN_USER
+    try:
+        payload = decode_token(actual_token)
+        if payload.get("type") != "access":
+            raise JWTError("not access token")
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
+    sub = payload.get("sub")
+    role = payload.get("role")
+    if not sub or not role:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
     return {"id": sub, "role": role, "name": payload.get("name", "")}
 
 

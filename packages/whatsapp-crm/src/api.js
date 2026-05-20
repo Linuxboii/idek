@@ -90,10 +90,11 @@ export const leadsApi = {
 export const chatApi = {
   sendText: (leadId, text) =>
     req(`/api/chat/${leadId}/send-text`, { method: 'POST', body: { text } }),
-  sendMedia: (leadId, file, caption = '') => {
+  sendMedia: (leadId, file, caption = '', voice = false) => {
     const fd = new FormData()
     fd.append('file', file)
     fd.append('caption', caption)
+    if (voice) fd.append('voice', 'true')
     return req(`/api/chat/${leadId}/send-media`, { method: 'POST', body: fd })
   },
 }
@@ -107,8 +108,10 @@ export const usersApi = {
 
 // SLI-LG named export
 export function mediaUrl(mediaId) {
-  const { apiBaseUrl } = getCrmConfig()
-  return `${apiBaseUrl}/api/media/${mediaId}`
+  const { apiBaseUrl, getToken } = getCrmConfig()
+  const token = getToken()
+  const base = `${apiBaseUrl}/api/media/${mediaId}`
+  return token ? `${base}?token=${encodeURIComponent(token)}` : base
 }
 
 export const mediaApi = {

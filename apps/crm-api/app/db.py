@@ -117,12 +117,18 @@ async def get_lead_state(phone: str) -> Optional[dict]:
         return dict(row) if row else None
 
 
-async def insert_message(lead_id: str, role: str, message_text: str) -> None:
+async def insert_message(
+    lead_id: str, role: str, message_text: str,
+    media_type: Optional[str] = None, media_id: Optional[str] = None,
+) -> str:
     async with pool().acquire() as con:
-        await con.execute(
-            "INSERT INTO messages (lead_id, role, message_text) VALUES ($1::uuid, $2, $3);",
-            lead_id, role, message_text,
+        row = await con.fetchval(
+            """INSERT INTO messages (lead_id, role, message_text, media_type, media_id)
+               VALUES ($1::uuid, $2, $3, $4, $5)
+               RETURNING id::text;""",
+            lead_id, role, message_text, media_type, media_id,
         )
+        return str(row)
 
 
 async def get_recent_messages(lead_id: str, limit: int = 5) -> list[dict]:

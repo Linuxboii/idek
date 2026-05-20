@@ -56,14 +56,33 @@ async def handle_message(payload: dict) -> None:
     referral = (msg.get("referral") or {}).get("source_url", "")
     referral_type = (msg.get("referral") or {}).get("source_type", "")
 
-    # Resolve message text
+    # ── Resolve message text & media fields ──────────────────────────────────
+    media_type: Optional[str] = None
+    media_id: Optional[str] = None
+    message_text = ""
+
     if mtype == "text":
         message_text = (msg.get("text") or {}).get("body", "")
     elif mtype == "audio":
+        media_type = "audio"
         media_id = (msg.get("audio") or {}).get("id")
         media_url = await whatsapp.get_media_url(media_id)
         audio_bytes, _ct = await whatsapp.download_media(media_url)
         message_text = await agent.transcribe(audio_bytes)
+    elif mtype == "image":
+        media_type = "image"
+        media_id = (msg.get("image") or {}).get("id")
+        message_text = (msg.get("image") or {}).get("caption", "[Image]")
+    elif mtype == "video":
+        media_type = "video"
+        media_id = (msg.get("video") or {}).get("id")
+        message_text = (msg.get("video") or {}).get("caption", "[Video]")
+    elif mtype == "document":
+        media_type = "document"
+        doc = msg.get("document") or {}
+        media_id = doc.get("id")
+        filename = doc.get("filename", "file")
+        message_text = doc.get("caption") or filename
     else:
         log.info("unsupported message type: %s", mtype)
         return
@@ -74,7 +93,10 @@ async def handle_message(payload: dict) -> None:
         phone=wa_id, name=name, referral_type=referral_type,
         referral=referral, raw_payload=payload,
     )
-    await db.insert_message(lead_id, "user", final_message)
+    msg_id = await db.insert_message(
+        lead_id, "user", final_message,
+        media_type=media_type, media_id=media_id,
+    )
 
     # ── AI GUARD ─────────────────────────────────────────────────────────────
     try:
@@ -86,8 +108,10 @@ async def handle_message(payload: dict) -> None:
                 "event": "new_message",
                 "lead_id": lead_id,
                 "message": {
+                    "id": msg_id,
                     "role": "user", "message_text": final_message,
-                    "media_type": None, "media_id": None, "created_at": _now_iso(),
+                    "media_type": media_type, "media_id": media_id,
+                    "created_at": _now_iso(),
                 },
             })
             return

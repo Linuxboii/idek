@@ -1,3 +1,4 @@
+import io
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional
@@ -10,10 +11,39 @@ from pydantic import BaseModel
 from . import db, whatsapp
 from .auth import (
     create_access_token, create_refresh_token,
-    get_current_user, get_ws_user,
+    get_current_user, get_media_user, get_ws_user,
     hash_password, require_admin, verify_password,
 )
 from .ws_manager import ws_manager
+
+# Optional PyAV for webm → ogg/opus transcoding
+try:
+    import av as _av
+    _HAS_AV = True
+except ImportError:
+    _HAS_AV = False
+
+
+def _webm_to_ogg_opus(data: bytes) -> bytes:
+    """Remux/transcode webm audio to ogg/opus. Returns original data on failure."""
+    if not _HAS_AV:
+        return data
+    try:
+        inp = io.BytesIO(data)
+        out = io.BytesIO()
+        with _av.open(inp, format="webm") as in_c:
+            in_stream = in_c.streams.audio[0]
+            with _av.open(out, mode="w", format="ogg") as out_c:
+                out_stream = out_c.add_stream("libopus", rate=48000)
+                for frame in in_c.decode(in_stream):
+                    for packet in out_stream.encode(frame):
+                        out_c.mux(packet)
+                for packet in out_stream.encode():
+                    out_c.mux(packet)
+        return out.getvalue()
+    except Exception:
+        logging.getLogger(__name__).warning("webm→ogg transcode failed, sending raw")
+        return data
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
@@ -158,14 +188,17 @@ async def send_media_endpoint(
     lead_id: str,
     file: UploadFile = File(...),
     caption: str = Form(""),
+    voice: str = Form("false"),
     user=Depends(get_current_user),
 ):
     conv = await db.get_conversation(lead_id)
     if not conv:
         raise HTTPException(status_code=404, detail="Lead not found")
 
+    is_voice = voice.lower() in ("true", "1", "yes")
     content_type = file.content_type or "application/octet-stream"
     file_bytes = await file.read()
+    upload_filename = file.filename or "file"
 
     if content_type.startswith("image/"):
         wa_type = "image"
@@ -176,15 +209,21 @@ async def send_media_endpoint(
     else:
         wa_type = "document"
 
-    media_id = await whatsapp.upload_media(file_bytes, content_type, file.filename or "file")
-    text_repr = f"[{wa_type}: {file.filename}]"
+    # Transcode webm voice recordings to ogg/opus for native WhatsApp voice notes
+    if is_voice and wa_type == "audio":
+        file_bytes = _webm_to_ogg_opus(file_bytes)
+        content_type = "audio/ogg; codecs=opus"
+        upload_filename = "voice.ogg"
+
+    media_id = await whatsapp.upload_media(file_bytes, content_type, upload_filename)
+    text_repr = caption or f"[{wa_type}: {upload_filename}]"
     msg_id = await db.insert_agent_message(
         lead_id, user["id"], text_repr, media_type=wa_type, media_id=media_id,
     )
     await db.set_takeover(lead_id, user["id"])
     await whatsapp.send_media(
         conv["lead"]["phone"], wa_type, media_id,
-        caption=caption, filename=file.filename or "",
+        caption=caption, filename=upload_filename, voice=is_voice,
     )
     await ws_manager.broadcast(lead_id, {
         "event": "new_message",
@@ -200,7 +239,7 @@ async def send_media_endpoint(
 
 
 @router.get("/media/{media_id}")
-async def proxy_media(media_id: str, _user=Depends(get_current_user)):
+async def proxy_media(media_id: str, _user=Depends(get_media_user)):
     from .config import settings
     async with httpx.AsyncClient() as client:
         meta = await client.get(

@@ -105,7 +105,7 @@ async def upload_media(file_bytes: bytes, content_type: str, filename: str) -> s
 
 async def send_media(
     to: str, media_type: str, media_id: str,
-    caption: str = "", filename: str = "",
+    caption: str = "", filename: str = "", voice: bool = False,
 ) -> dict:
     """Send a media message using an already-uploaded media_id."""
     if media_type == "document":
@@ -118,7 +118,8 @@ async def send_media(
             media_body["caption"] = caption
     else:  # audio
         media_body = {"id": media_id}
-
+        if voice:
+            media_body["voice"] = True
     payload = {
         "messaging_product": "whatsapp",
         "to": to,

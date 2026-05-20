@@ -11,6 +11,13 @@ export default function ChatPanel({ lead: initialLead }) {
   const [sending, setSending] = useState(false)
   const bottomRef = useRef()
 
+  // Voice recording state
+  const [recording, setRecording] = useState(false)
+  const [recDuration, setRecDuration] = useState(0)
+  const recorderRef = useRef(null)
+  const chunksRef = useRef([])
+  const timerRef = useRef(null)
+
   const loadConv = async () => {
     if (!initialLead?.id) return
     try {
@@ -53,6 +60,62 @@ export default function ChatPanel({ lead: initialLead }) {
     } catch { /* ignore */ }
   }
 
+  // ── Voice recording handlers ──────────────────────────────────────────
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/webm'
+      const mr = new MediaRecorder(stream, { mimeType })
+      chunksRef.current = []
+      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+      mr.start()
+      recorderRef.current = mr
+      setRecording(true)
+      setRecDuration(0)
+      timerRef.current = setInterval(() => setRecDuration(d => d + 1), 1000)
+    } catch (err) {
+      console.error('Mic access denied:', err)
+    }
+  }
+
+  const stopRecording = () => {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
+    const mr = recorderRef.current
+    if (mr && mr.state !== 'inactive') {
+      mr.stream.getTracks().forEach(t => t.stop())
+      mr.stop()
+    }
+    recorderRef.current = null
+    setRecording(false)
+    setRecDuration(0)
+  }
+
+  const cancelRecording = () => {
+    stopRecording()
+    chunksRef.current = []
+  }
+
+  const sendRecording = () => {
+    const mr = recorderRef.current
+    if (!mr || !conv) return
+    mr.onstop = async () => {
+      const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+      const file = new File([blob], 'voice.webm', { type: 'audio/webm' })
+      chunksRef.current = []
+      setSending(true)
+      try {
+        await chatApi.sendMedia(conv.lead.id, file, '', true)
+        await loadConv()
+      } catch { /* ignore */ } finally { setSending(false) }
+    }
+    stopRecording()
+  }
+
+  const fmtDur = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+  // ─────────────────────────────────────────────────────────────────────
+
   if (!initialLead) {
     return (
       <div className="flex-1 flex items-center justify-center text-[var(--crm-muted)] bg-[var(--crm-bubble-them-bg)]">
@@ -94,17 +157,45 @@ export default function ChatPanel({ lead: initialLead }) {
         {conv?.messages?.map((m, i) => <MessageBubble key={m.id || i} msg={m} />)}
         <div ref={bottomRef} />
       </div>
-      <form onSubmit={handleSendText}
-        className="px-4 py-3 border-t border-[var(--crm-border)] flex items-center gap-2 bg-[var(--crm-bg)]">
-        <MediaUpload onFile={handleSendMedia} />
-        <input type="text" value={text} onChange={e => setText(e.target.value)}
-          placeholder="Type a message..."
-          className="flex-1 border border-[var(--crm-input-border)] bg-[var(--crm-input-bg)] rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--crm-accent)]" />
-        <button type="submit" disabled={sending || !text.trim()}
-          className="bg-[var(--crm-accent)] hover:opacity-90 text-[var(--crm-accent-fg)] rounded-full w-9 h-9 flex items-center justify-center disabled:opacity-50 flex-shrink-0 text-sm">
-          &gt;
-        </button>
-      </form>
+
+      {/* ── Input bar ── */}
+      {recording ? (
+        <div className="px-4 py-3 border-t border-[var(--crm-border)] flex items-center gap-3 bg-[var(--crm-bg)]">
+          <button onClick={cancelRecording} title="Cancel"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--crm-muted)' }}>
+            ✕
+          </button>
+          <span style={{
+            display: 'inline-block', width: 10, height: 10, borderRadius: '50%',
+            background: '#ef4444', animation: 'crm-pulse 1s ease-in-out infinite',
+          }} />
+          <span className="text-sm text-[var(--crm-fg)]" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {fmtDur(recDuration)}
+          </span>
+          <span className="text-xs text-[var(--crm-muted)] flex-1">Recording…</span>
+          <button onClick={sendRecording} title="Send voice note"
+            className="bg-[var(--crm-accent)] hover:opacity-90 text-[var(--crm-accent-fg)] rounded-full w-9 h-9 flex items-center justify-center text-sm flex-shrink-0">
+            ▶
+          </button>
+          <style>{`@keyframes crm-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }`}</style>
+        </div>
+      ) : (
+        <form onSubmit={handleSendText}
+          className="px-4 py-3 border-t border-[var(--crm-border)] flex items-center gap-2 bg-[var(--crm-bg)]">
+          <MediaUpload onFile={handleSendMedia} />
+          <button type="button" onClick={startRecording} title="Record voice note"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--crm-muted)', flexShrink: 0 }}>
+            🎙️
+          </button>
+          <input type="text" value={text} onChange={e => setText(e.target.value)}
+            placeholder="Type a message..."
+            className="flex-1 border border-[var(--crm-input-border)] bg-[var(--crm-input-bg)] rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--crm-accent)]" />
+          <button type="submit" disabled={sending || !text.trim()}
+            className="bg-[var(--crm-accent)] hover:opacity-90 text-[var(--crm-accent-fg)] rounded-full w-9 h-9 flex items-center justify-center disabled:opacity-50 flex-shrink-0 text-sm">
+            &gt;
+          </button>
+        </form>
+      )}
     </div>
   )
 }
