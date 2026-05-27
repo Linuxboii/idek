@@ -60,7 +60,8 @@
       "Bash(npm --workspace apps/sli-lg/client run build)",
       "Bash(npm --workspace packages/whatsapp-crm test)",
       "Bash(git rm *)",
-      "Bash(curl -sS -i -X OPTIONS \"https://wa-slilg.avlokai.com/api/conversations?phone=%2B919346672015&limit=1\" -H \"Origin: http://localhost:5174\" -H \"Access-Control-Request-Method: GET\" -H \"Access-Control-Request-Headers: authorization,content-type\")"
+      "Bash(curl -sS -i -X OPTIONS \"https://wa-slilg.avlokai.com/api/conversations?phone=%2B919346672015&limit=1\" -H \"Origin: http://localhost:5174\" -H \"Access-Control-Request-Method: GET\" -H \"Access-Control-Request-Headers: authorization,content-type\")",
+      "Bash(npm --workspace apps/crm-web install xlsx)"
     ]
   }
 }

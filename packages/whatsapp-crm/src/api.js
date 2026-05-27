@@ -7,14 +7,12 @@ import { getCrmConfig } from './config.js'
  */
 export async function request(path, { method = 'GET', body, headers = {}, params } = {}) {
   const { apiBaseUrl, getToken, onUnauthorized } = getCrmConfig()
-  const token = getToken()
   const finalHeaders = { ...headers }
 
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
   if (body !== undefined && body !== null && !isFormData) {
     finalHeaders['Content-Type'] = finalHeaders['Content-Type'] || 'application/json'
   }
-  if (token) finalHeaders.Authorization = `Bearer ${token}`
 
   let url = `${apiBaseUrl}${path}`
   if (params && typeof params === 'object') {
@@ -26,15 +24,24 @@ export async function request(path, { method = 'GET', body, headers = {}, params
     if (s) url += (url.includes('?') ? '&' : '?') + s
   }
 
-  const res = await fetch(url, {
-    method,
-    headers: finalHeaders,
-    body: isFormData ? body : (body !== undefined && body !== null ? JSON.stringify(body) : undefined),
-  })
+  const requestBody = isFormData ? body : (body !== undefined && body !== null ? JSON.stringify(body) : undefined)
 
+  const send = async () => {
+    const token = getToken()
+    const authHeaders = { ...finalHeaders }
+    if (token) authHeaders.Authorization = `Bearer ${token}`
+    return fetch(url, {
+      method,
+      headers: authHeaders,
+      body: requestBody,
+    })
+  }
+
+  let res = await send()
   if (res.status === 401) {
-    onUnauthorized()
-    throw new Error('Unauthorized')
+    await onUnauthorized()
+    res = await send()
+    if (res.status === 401) throw new Error('Unauthorized')
   }
   if (!res.ok) {
     const text = await res.text().catch(() => '')
@@ -56,6 +63,8 @@ async function req(path, opts) {
 export const authApi = {
   login: (email, password) =>
     req('/api/auth/login', { method: 'POST', body: { email, password } }),
+  refresh: (refreshToken) =>
+    req('/api/auth/refresh', { method: 'POST', headers: { Authorization: `Bearer ${refreshToken}` } }),
 }
 
 export const conversationsApi = {
@@ -104,6 +113,13 @@ export const usersApi = {
   create: (data) => req('/api/users', { method: 'POST', body: data }),
   update: (id, data) => req(`/api/users/${id}`, { method: 'PUT', body: data }),
   deactivate: (id) => req(`/api/users/${id}`, { method: 'DELETE' }),
+}
+
+export const templatesApi = {
+  list: () => req('/api/templates'),
+  send: (data) => req('/api/send-template', { method: 'POST', body: data }),
+  jobs: (limit = 25) => req('/api/jobs', { params: { limit } }),
+  job: (id) => req(`/api/jobs/${id}`),
 }
 
 // SLI-LG named export

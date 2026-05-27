@@ -54,9 +54,14 @@ export default function Dashboard() {
         <div className="flex items-center gap-4">
           <span className="text-sm opacity-80">{user?.name} · {user?.role}</span>
           {user?.role === 'admin' && (
-            <Link to="/admin/users" className="text-sm underline opacity-80 hover:opacity-100">
-              Agents
-            </Link>
+            <>
+              <Link to="/admin/templates" className="text-sm underline opacity-80 hover:opacity-100">
+                Templates
+              </Link>
+              <Link to="/admin/users" className="text-sm underline opacity-80 hover:opacity-100">
+                Agents
+              </Link>
+            </>
           )}
           <button onClick={logout}
             className="text-sm bg-green-700 hover:bg-green-800 px-3 py-1 rounded-lg">

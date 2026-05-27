@@ -7,6 +7,7 @@ export {
   leadsApi,
   mediaApi,
   mediaUrl,
+  templatesApi,
   usersApi,
 } from './api.js'
 export { useWebSocket, useCrmWebSocket } from './ws.js'

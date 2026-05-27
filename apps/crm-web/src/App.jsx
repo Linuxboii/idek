@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import AdminUsers from './pages/AdminUsers'
+import TemplateMessages from './pages/TemplateMessages'
 
 function Private({ children }) {
   const { user } = useAuth()
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<Private><Dashboard /></Private>} />
           <Route path="/admin/users" element={<AdminOnly><AdminUsers /></AdminOnly>} />
+          <Route path="/admin/templates" element={<AdminOnly><TemplateMessages /></AdminOnly>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

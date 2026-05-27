@@ -4,13 +4,15 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from jose import JWTError
 
 from . import db, whatsapp
 from .auth import (
     create_access_token, create_refresh_token,
+    decode_token,
     get_current_user, get_media_user, get_ws_user,
     hash_password, require_admin, verify_password,
 )
@@ -84,6 +86,38 @@ async def login(req: LoginRequest):
         "refresh_token": create_refresh_token(token_data),
         "token_type": "bearer",
         "user": {"id": user["id"], "name": user["name"], "role": user["role"]},
+    }
+
+
+@router.post("/auth/refresh")
+async def refresh_token(authorization: Optional[str] = Header(None)):
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Missing refresh token")
+    token = authorization.split(" ", 1)[1].strip()
+    try:
+        payload = decode_token(token)
+        if payload.get("type") != "refresh":
+            raise JWTError("not refresh token")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+
+    token_data = {
+        "sub": payload.get("sub"),
+        "role": payload.get("role"),
+        "name": payload.get("name", ""),
+    }
+    if not token_data["sub"] or not token_data["role"]:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+    return {
+        "access_token": create_access_token(token_data),
+        "refresh_token": create_refresh_token(token_data),
+        "token_type": "bearer",
+        "user": {
+            "id": token_data["sub"],
+            "name": token_data["name"],
+            "role": token_data["role"],
+        },
     }
 
 

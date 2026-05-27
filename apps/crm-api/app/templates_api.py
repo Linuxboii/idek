@@ -3,19 +3,28 @@ import re
 from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException
+from jose import JWTError
 from pydantic import BaseModel, Field
 
 from . import db, whatsapp
+from .auth import decode_token
 from .config import settings
 
 router = APIRouter(prefix="/api", tags=["templates"])
 
 
+class ContactIn(BaseModel):
+    phone: str
+    params: list[str] = []
+
+
 class SendTemplateIn(BaseModel):
-    numbers: list[str] = Field(..., description="E.164 phone numbers, country code included")
+    numbers: list[str] = Field(default=[], description="E.164 phone numbers, same params for all")
+    contacts: list[ContactIn] = Field(default=[], description="Per-recipient phone + params")
     template_name: str
     language_code: str = "en_US"
     body_params: list[str] = []
+    header_image: Optional[str] = None
 
 
 class SendResult(BaseModel):
@@ -38,8 +47,15 @@ class SendTemplateOut(BaseModel):
 def _auth(token: Optional[str]) -> None:
     if not token or not token.startswith("Bearer "):
         raise HTTPException(401, "missing bearer token")
-    if token.removeprefix("Bearer ").strip() != settings.ADMIN_TOKEN:
-        raise HTTPException(403, "invalid token")
+    bearer = token.removeprefix("Bearer ").strip()
+    if bearer == settings.ADMIN_TOKEN:
+        return
+    try:
+        payload = decode_token(bearer)
+    except JWTError:
+        raise HTTPException(401, "invalid or expired token")
+    if payload.get("type") != "access" or payload.get("role") != "admin":
+        raise HTTPException(403, "admin only")
 
 
 def _clean_phone(p: str) -> Optional[str]:
@@ -47,9 +63,9 @@ def _clean_phone(p: str) -> Optional[str]:
     return digits if 8 <= len(digits) <= 15 else None
 
 
-async def _send_one(job_id: str, phone: str, name: str, lang: str, params: list[str]) -> SendResult:
+async def _send_one(job_id: str, phone: str, name: str, lang: str, params: list[str], header_image: str | None = None) -> SendResult:
     try:
-        resp = await whatsapp.send_template(phone, name, lang, params)
+        resp = await whatsapp.send_template(phone, name, lang, params, header_image)
         ok = 200 <= resp["status_code"] < 300
         body = resp["body"] or {}
         wamid = None
@@ -80,21 +96,28 @@ async def send_template_bulk(
     authorization: Optional[str] = Header(None),
 ):
     _auth(authorization)
-    cleaned = [c for c in (_clean_phone(n) for n in body.numbers) if c]
-    if not cleaned:
+
+    # Build (phone, params) pairs — contacts takes priority over flat numbers list
+    if body.contacts:
+        pairs = [(p, prm) for p, prm in ((_clean_phone(ct.phone), ct.params) for ct in body.contacts) if p]
+    else:
+        pairs = [(_clean_phone(n), body.body_params) for n in body.numbers]
+        pairs = [(p, prm) for p, prm in pairs if p]
+
+    if not pairs:
         raise HTTPException(400, "no valid numbers")
 
     job_id = await db.create_template_job(
-        body.template_name, body.language_code, body.body_params, len(cleaned),
+        body.template_name, body.language_code, body.body_params, len(pairs),
     )
 
     sem = asyncio.Semaphore(5)
 
-    async def guarded(p: str) -> SendResult:
+    async def guarded(p: str, prm: list[str]) -> SendResult:
         async with sem:
-            return await _send_one(job_id, p, body.template_name, body.language_code, body.body_params)
+            return await _send_one(job_id, p, body.template_name, body.language_code, prm, body.header_image)
 
-    results = await asyncio.gather(*(guarded(p) for p in cleaned))
+    results = await asyncio.gather(*(guarded(p, prm) for p, prm in pairs))
     return SendTemplateOut(
         job_id=job_id,
         total=len(results),
@@ -107,7 +130,10 @@ async def send_template_bulk(
 @router.get("/templates")
 async def list_templates(authorization: Optional[str] = Header(None)):
     _auth(authorization)
-    templates = await whatsapp.get_templates()
+    try:
+        templates = await whatsapp.get_templates()
+    except ValueError as e:
+        raise HTTPException(500, str(e))
     return {"templates": templates}
 
 

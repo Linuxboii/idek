@@ -30,8 +30,14 @@ async def send_template(
     template_name: str,
     language_code: str = "en_US",
     body_params: list[str] | None = None,
+    header_image: str | None = None,
 ) -> dict:
     components = []
+    if header_image:
+        components.append({
+            "type": "header",
+            "parameters": [{"type": "image", "image": {"link": header_image}}],
+        })
     if body_params:
         components.append({
             "type": "body",
@@ -57,8 +63,8 @@ async def get_templates() -> list[dict]:
     """Fetch approved message templates from Meta Graph API."""
     waba_id = settings.WA_BUSINESS_ACCOUNT_ID
     if not waba_id:
-        return []
-    url = f"{GRAPH}/{waba_id}/message_templates?limit=100&status=APPROVED"
+        raise ValueError("WA_BUSINESS_ACCOUNT_ID is not configured")
+    url = f"{GRAPH}/{waba_id}/message_templates?limit=100"
     async with httpx.AsyncClient(timeout=30) as c:
         r = await c.get(url, headers={"Authorization": f"Bearer {settings.WA_ACCESS_TOKEN}"})
         r.raise_for_status()
@@ -67,6 +73,7 @@ async def get_templates() -> list[dict]:
             {
                 "name": t["name"],
                 "language": t["language"],
+                "status": t.get("status", ""),
                 "category": t.get("category", ""),
                 "components": t.get("components", []),
             }
